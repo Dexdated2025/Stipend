@@ -57,6 +57,17 @@ The table only allows inserts from the website. Nobody can read the list through
 4. Click **Deploy**. You get a live `*.vercel.app` URL in about a minute.
 5. Custom domain: **Project > Settings > Domains**, add your domain, then add the DNS records Vercel shows you at your registrar.
 
+#### stipend.fi (already added in Vercel, waiting on purchase)
+
+`stipend.fi` redirects (308) to `www.stipend.fi`, which serves Production. Once the domain is bought, add these at the registrar's DNS (Gandi: **Domain > DNS Records**), and delete any default `@` A or `www` CNAME records Gandi created:
+
+| Type | Name | Value |
+|---|---|---|
+| A | `@` | `216.198.79.1` |
+| CNAME | `www` | `c69f465e297e0e53.vercel-dns-017.com.` |
+
+Then hit **Refresh** on both domains in Vercel. HTTPS is issued automatically once they show Valid Configuration. Always copy the values from Vercel's Domains page if they ever differ from this table.
+
 Every push to the main branch redeploys automatically. If you change env vars, redeploy, because Vite bakes them in at build time.
 
 ### Option B: Netlify
