@@ -94,8 +94,8 @@ export default function Mandates() {
                 View Passport <ArrowUpRight className="h-3 w-3" />
               </Link>
             </div>
-            <div className="flex items-center gap-2">
-              {dirty && <span className="text-xs text-tangerine-400">Unsaved changes</span>}
+            <div className="flex flex-wrap items-center gap-2">
+              {dirty && <span className="w-full text-xs text-tangerine-400 sm:w-auto">Unsaved changes</span>}
               <Button variant="ghost" disabled={!dirty} onClick={() => { setDraft(agent.mandate); setErrors({}); }}>
                 Discard
               </Button>
