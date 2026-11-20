@@ -11,6 +11,8 @@ export interface PassportData {
   network: string;
   issued: string;
   status: "active" | "paused" | "killed";
+  /** Wallet that signed the mandate (EIP-712), when signed and verified. */
+  signer?: string;
 }
 
 const statusTone = {
@@ -71,7 +73,12 @@ export function PassportCard({ data, className }: { data: PassportData; classNam
             <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted">Attestation</p>
             <p className="mt-1 truncate font-mono text-xs text-electric-300">{shortHex(data.attestation, 14, 10)}</p>
           </div>
-          <p className="shrink-0 font-mono text-[10px] text-muted">{data.issued}</p>
+          <div className="shrink-0 text-right">
+            {data.signer && (
+              <p className="font-mono text-[10px] text-electric-300">Signed by {shortHex(data.signer, 6, 4)}</p>
+            )}
+            <p className="font-mono text-[10px] text-muted">{data.issued}</p>
+          </div>
         </div>
       </div>
     </Tilt>

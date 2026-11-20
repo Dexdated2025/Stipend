@@ -10,6 +10,7 @@ import {
   FileCheck2,
   LayoutDashboard,
   Menu,
+  Network,
   Play,
   Receipt,
   RotateCcw,
@@ -22,15 +23,20 @@ import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { DemoProvider, useDemo } from "@/lib/demo/store";
 import { SimulatorProvider, useSimulator } from "./Simulator";
+import { Web3Provider } from "@/components/web3/Web3Provider";
+import { WalletButton } from "@/components/web3/WalletButton";
+import { useTestnetWallet } from "@/lib/web3/hooks";
 import { cn } from "@/lib/utils";
 
 export default function AppShell() {
   return (
-    <DemoProvider>
-      <SimulatorProvider>
-        <Shell />
-      </SimulatorProvider>
-    </DemoProvider>
+    <Web3Provider>
+      <DemoProvider>
+        <SimulatorProvider>
+          <Shell />
+        </SimulatorProvider>
+      </DemoProvider>
+    </Web3Provider>
   );
 }
 
@@ -40,6 +46,7 @@ const nav = [
   { to: "/app/mandates", label: "Mandates", icon: FileCheck2 },
   { to: "/app/payments", label: "Payments", icon: Receipt },
   { to: "/app/treasury", label: "Treasury", icon: Wallet },
+  { to: "/app/testnet", label: "Testnet", icon: Network },
   { to: "/app/settings", label: "Settings", icon: Settings },
 ];
 
@@ -50,6 +57,7 @@ function Shell() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const outlet = useOutlet();
+  const wallet = useTestnetWallet();
   const pending = state.payments.filter((p) => p.status === "pending").length;
 
   useEffect(() => setMobileOpen(false), [location.pathname]);
@@ -113,6 +121,7 @@ function Shell() {
         ))}
       </nav>
       <div className="space-y-2 border-t border-white/[0.06] p-3">
+        <WalletButton />
         <Button variant="primary" size="md" className="w-full" onClick={() => openSimulator()}>
           <Play className="h-4 w-4" /> Simulate payment
         </Button>
@@ -133,7 +142,9 @@ function Shell() {
     <div className="min-h-screen">
       <div className="sticky top-0 z-30 flex items-center justify-center gap-2 border-b border-tangerine/25 bg-[#1d1712]/95 px-4 py-1.5 text-center text-xs text-tangerine-300 backdrop-blur">
         <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-tangerine" />
-        Demo mode. Simulated data on Base Sepolia.
+        {wallet.onChain
+          ? "Testnet live on Base Sepolia. Test tokens only."
+          : "Demo mode. Simulated data on Base Sepolia."}
       </div>
 
       {/* Desktop sidebar */}

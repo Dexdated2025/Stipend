@@ -13,7 +13,9 @@ import type {
   Framework,
   Mandate,
   Member,
+  OwnerSignature,
   Payment,
+  Settlement,
   Sweep,
   Treasury,
 } from "./types";
@@ -121,6 +123,8 @@ interface DemoApi {
   addMember: (m: Omit<Member, "id">) => void;
   removeMember: (id: string) => void;
   resetDemo: () => void;
+  signMandate: (agentId: string, sig: OwnerSignature) => void;
+  setSettlement: (paymentId: string, settlement: Settlement) => void;
 }
 
 const DemoContext = createContext<DemoApi | null>(null);
@@ -402,6 +406,53 @@ export function DemoProvider({ children }: { children: ReactNode }) {
 
   const resetDemo = useCallback(() => commit(createSeedState()), [commit]);
 
+  const signMandate = useCallback<DemoApi["signMandate"]>(
+    (agentId, sig) => {
+      const s = ref.current;
+      const agent = s.agents.find((a) => a.id === agentId);
+      if (!agent) return;
+      commit({
+        ...s,
+        agents: s.agents.map((a) => (a.id === agentId ? { ...a, ownerSignature: sig, attestation: sig.signature } : a)),
+        audit: audit(s, {
+          actor: "you",
+          agentId,
+          action: "Mandate signed",
+          detail: `${agent.name} mandate signed on Base Sepolia by ${sig.signer.slice(0, 6)}…${sig.signer.slice(-4)}`,
+        }),
+      });
+    },
+    [commit],
+  );
+
+  const setSettlement = useCallback<DemoApi["setSettlement"]>(
+    (paymentId, settlement) => {
+      const s = ref.current;
+      const p = s.payments.find((x) => x.id === paymentId);
+      if (!p) return;
+      const confirmed = settlement.status === "confirmed" && settlement.hash;
+      commit({
+        ...s,
+        payments: s.payments.map((x) =>
+          x.id === paymentId ? { ...x, settlement, txHash: confirmed ? settlement.hash : x.txHash } : x,
+        ),
+        audit:
+          settlement.status === "confirmed" || settlement.status === "failed"
+            ? audit(s, {
+                actor: "system",
+                agentId: p.agentId,
+                action: settlement.status === "confirmed" ? "Settled on Base Sepolia" : "Settlement failed",
+                detail:
+                  settlement.status === "confirmed"
+                    ? `${p.amount.toFixed(2)} test USDC · tx ${settlement.hash?.slice(0, 10)}…`
+                    : settlement.error ?? "Transaction failed",
+              })
+            : s.audit,
+      });
+    },
+    [commit],
+  );
+
   const api = useMemo<DemoApi>(
     () => ({
       state,
@@ -421,6 +472,8 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       addMember,
       removeMember,
       resetDemo,
+      signMandate,
+      setSettlement,
     }),
     [
       state,
@@ -440,6 +493,8 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       addMember,
       removeMember,
       resetDemo,
+      signMandate,
+      setSettlement,
     ],
   );
 

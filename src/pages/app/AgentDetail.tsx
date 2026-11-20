@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Pencil, Play, RotateCcw } from "lucide-react";
 import { PassportCard } from "@/components/visuals/PassportCard";
+import { SignatureBadge, useMandateSignatureState } from "@/components/web3/SignMandateButton";
 import { ActivityFeed, BudgetBar, CopyButton, PageHeader, PaymentsTable } from "@/components/app/Shared";
 import { useSimulator } from "@/components/app/Simulator";
 import { Button, LinkButton } from "@/components/ui/Button";
@@ -17,6 +18,7 @@ export default function AgentDetail() {
   const { openSimulator } = useSimulator();
   const { toast } = useToast();
   const agent = state.agents.find((a) => a.id === agentId);
+  const sigState = useMandateSignatureState(agent);
   const spend = useMemo(() => (agent ? agentSpend(state, agent.id) : { today: 0, last30: 0 }), [state, agent]);
   const payments = useMemo(() => state.payments.filter((p) => p.agentId === agentId), [state.payments, agentId]);
   const audit = useMemo(() => activityFeed({ ...state, payments: [] }, 20, agentId), [state, agentId]);
@@ -87,9 +89,11 @@ export default function AgentDetail() {
               network: "Base Sepolia",
               issued: `Issued ${formatDate(agent.createdAt)}`,
               status: agent.status,
+              signer: sigState === "verified" ? agent.ownerSignature?.signer : undefined,
             }}
           />
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <SignatureBadge agent={agent} />
             {passport
               .filter(([, , copy]) => copy)
               .map(([k, v]) => (

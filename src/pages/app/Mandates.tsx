@@ -7,6 +7,7 @@ import { AgentBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { useDemo } from "@/lib/demo/store";
+import { SignMandateButton, SignatureBadge } from "@/components/web3/SignMandateButton";
 import { describeHours } from "@/lib/demo/mandate";
 import type { Mandate } from "@/lib/demo/types";
 import { cn, usd } from "@/lib/utils";
@@ -85,7 +86,10 @@ export default function Mandates() {
         <section className="card">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
             <div>
-              <h2 className="font-mono text-base font-semibold">{agent.name}</h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="font-mono text-base font-semibold">{agent.name}</h2>
+                <SignatureBadge agent={agent} />
+              </div>
               <Link to={`/app/agents/${agent.id}`} className="inline-flex items-center gap-1 text-xs text-electric-300 hover:text-electric-400">
                 View Passport <ArrowUpRight className="h-3 w-3" />
               </Link>
@@ -95,7 +99,8 @@ export default function Mandates() {
               <Button variant="ghost" disabled={!dirty} onClick={() => { setDraft(agent.mandate); setErrors({}); }}>
                 Discard
               </Button>
-              <Button variant="halo" disabled={!dirty} onClick={save}>
+              <SignMandateButton agent={agent} disabled={dirty} />
+              <Button variant="primary" disabled={!dirty} onClick={save}>
                 <Save className="h-4 w-4" /> Save mandate
               </Button>
             </div>

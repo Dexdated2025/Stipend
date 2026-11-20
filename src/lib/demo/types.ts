@@ -29,6 +29,16 @@ export interface Mandate {
   hoursEnd: number;
 }
 
+/** A real EIP-712 signature over the mandate, made with the owner's wallet on Base Sepolia. */
+export interface OwnerSignature {
+  signer: string;
+  signature: string;
+  signedAt: string;
+  issuedAt: number;
+  /** mandateFingerprint() at signing time. If the mandate changes, the signature is outdated. */
+  fingerprint: string;
+}
+
 export interface Agent {
   id: string;
   name: string;
@@ -38,6 +48,7 @@ export interface Agent {
   createdAt: string;
   status: AgentStatus;
   mandate: Mandate;
+  ownerSignature?: OwnerSignature;
 }
 
 export type RuleId =
@@ -49,6 +60,17 @@ export type RuleId =
   | "monthly_budget"
   | "approval_threshold"
   | "cash_buffer";
+
+/** A real test-USDC transfer on Base Sepolia for an approved payment. */
+export interface Settlement {
+  network: "base-sepolia";
+  status: "awaiting_wallet" | "pending" | "confirmed" | "failed";
+  hash?: string;
+  from?: string;
+  to?: string;
+  blockNumber?: string;
+  error?: string;
+}
 
 export interface Payment {
   id: string;
@@ -63,6 +85,7 @@ export interface Payment {
   rule?: RuleId;
   txHash?: string;
   resolvedBy?: string;
+  settlement?: Settlement;
 }
 
 export type AuditActor = "system" | "you" | "agent";

@@ -189,11 +189,20 @@ export function PaymentsTable({ payments, agents, vendors, onResolve, hideAgent 
                   ) : (
                     <div className="flex items-center gap-2">
                       <span className={cn("text-xs", p.status === "blocked" ? "text-tangerine-300" : "text-muted")}>{p.reason}</span>
-                      {p.txHash && (
+                      {p.settlement?.status === "confirmed" && p.settlement.hash ? (
+                        <a
+                          href={`https://sepolia.basescan.org/tx/${p.settlement.hash}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="whitespace-nowrap rounded-md border border-electric/40 px-1.5 py-0.5 font-mono text-[10px] text-electric-300 hover:bg-electric/10"
+                        >
+                          on-chain ↗
+                        </a>
+                      ) : p.txHash ? (
                         <span className="hidden font-mono text-[11px] text-muted/80 2xl:inline" title={p.txHash}>
                           {shortHex(p.txHash)}
                         </span>
-                      )}
+                      ) : null}
                     </div>
                   )}
                 </td>

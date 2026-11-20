@@ -1,13 +1,18 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
-import { Ban, Check, CircleCheck, Hourglass, LoaderCircle, Play, RotateCcw } from "lucide-react";
+import { ArrowUpRight, Ban, Check, CircleCheck, Hourglass, LoaderCircle, Play, RotateCcw } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { useDemo } from "@/lib/demo/store";
 import { describeHours } from "@/lib/demo/mandate";
 import type { Check as CheckT, Evaluation, Payment } from "@/lib/demo/types";
 import { cn, shortHex, usd } from "@/lib/utils";
+import { Toggle } from "@/components/ui/Toggle";
+import { useSettlePref, useTestnetWallet } from "@/lib/web3/hooks";
+import { useSettlePayment } from "@/lib/web3/settle";
+import { explorerTx } from "@/lib/web3/config";
+import type { Settlement } from "@/lib/demo/types";
 
 interface SimulatorApi {
   openSimulator: (agentId?: string) => void;
@@ -43,6 +48,10 @@ const STEP_MS = 380;
 
 function SimulatorModal({ open, onClose, initialAgentId }: { open: boolean; onClose: () => void; initialAgentId?: string }) {
   const { state, simulatePayment } = useDemo();
+  const wallet = useTestnetWallet();
+  const [settlePref, setSettlePref] = useSettlePref();
+  const { settle } = useSettlePayment();
+  const settleOn = settlePref && wallet.onChain;
   const navigate = useNavigate();
   const defaultAgent = initialAgentId ?? state.agents.find((a) => a.status === "active")?.id ?? state.agents[0]?.id ?? "";
 
@@ -73,11 +82,12 @@ function SimulatorModal({ open, onClose, initialAgentId }: { open: boolean; onCl
     const vendor = state.vendors.find((v) => v.id === vendorId);
     const typical = vendor ? (vendor.typical[0] + vendor.typical[1]) / 4 : m.approvalAbove / 2;
     return [
+      ...(wallet.onChain ? [{ label: "Testnet", value: 1 }] : []),
       { label: "Within limits", value: Math.max(1, Math.min(typical, m.approvalAbove * 0.6)) },
       { label: "Needs approval", value: (m.approvalAbove + m.perTxCap) / 2 },
       { label: "Over cap", value: m.perTxCap * 1.25 },
     ].map((p) => ({ ...p, value: Math.round(p.value * 100) / 100 }));
-  }, [agent, vendorId, state.vendors]);
+  }, [agent, vendorId, state.vendors, wallet.onChain]);
 
   const amountNum = Number(amount);
   const canRun = agent && vendorId && amountNum > 0 && amountNum < 10_000_000;
@@ -91,6 +101,11 @@ function SimulatorModal({ open, onClose, initialAgentId }: { open: boolean; onCl
     if (r) {
       setRevealed(0);
       setResult(r);
+      // Real settlement on Base Sepolia. Starts after the check animation so the wallet prompt follows the verdict.
+      if (settleOn && r.evaluation.status === "approved") {
+        const delay = r.evaluation.checks.length * STEP_MS + 300;
+        window.setTimeout(() => void settle(r.payment.id, vendorId, amountNum), delay);
+      }
     }
   };
 
@@ -194,6 +209,18 @@ function SimulatorModal({ open, onClose, initialAgentId }: { open: boolean; onCl
             </select>
           </div>
 
+          {wallet.onChain && (
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-electric/30 bg-electric/[0.05] px-4 py-3 sm:col-span-2">
+              <div className="min-w-0">
+                <p className="text-sm font-medium">Settle on Base Sepolia</p>
+                <p className="truncate font-mono text-xs text-muted">
+                  test USDC from {shortHex(wallet.address ?? "", 6, 4)} · balance {wallet.usdcBalance?.toFixed(2) ?? "…"}
+                </p>
+              </div>
+              <Toggle checked={settlePref} onChange={setSettlePref} label="Settle approved payments on Base Sepolia" />
+            </div>
+          )}
+
           {agent && (
             <div className="rounded-lg border border-line bg-bg p-4 sm:col-span-2">
               <p className="text-xs font-medium uppercase tracking-wide text-muted">Mandate for {agent.name}</p>
@@ -229,6 +256,8 @@ function SimulationResult({
   vendorName: string;
 }) {
   const { evaluation, payment } = result;
+  const { state } = useDemo();
+  const liveSettlement = state.payments.find((p) => p.id === payment.id)?.settlement;
   const tone =
     evaluation.status === "approved"
       ? { cls: "border-electric/60 bg-electric/[0.08] text-electric-300", icon: <CircleCheck className="h-6 w-6" />, label: "Approved" }
@@ -283,11 +312,12 @@ function SimulationResult({
         <div className="min-w-0">
           <p className="font-display text-lg font-semibold">{done ? tone.label : "Checking mandate…"}</p>
           {done && <p className="mt-0.5 text-sm text-fg/90">{evaluation.reason}</p>}
-          {done && payment.txHash && (
+          {done && payment.txHash && !liveSettlement && (
             <p className="mt-2 font-mono text-xs text-muted">
               tx {shortHex(payment.txHash, 10, 8)} · logged to Passport · waited 0s
             </p>
           )}
+          {done && liveSettlement && <SettlementLine s={liveSettlement} />}
           {done && evaluation.status === "pending" && (
             <p className="mt-2 text-xs text-muted">An approver can release it from the Payments ledger.</p>
           )}
@@ -341,5 +371,28 @@ function CheckRow({ check, state }: { check: CheckT; state: "shown" | "running" 
       <span className="w-32 shrink-0 text-sm font-medium sm:w-36">{check.label}</span>
       <span className={cn("min-w-0 truncate text-xs", shown ? (fail ? "text-tangerine-300" : "text-muted") : "text-transparent")}>{check.detail}</span>
     </motion.li>
+  );
+}
+
+function SettlementLine({ s }: { s: Settlement }) {
+  const label =
+    s.status === "awaiting_wallet"
+      ? "Confirm the test USDC transfer in your wallet…"
+      : s.status === "pending"
+        ? "Broadcast on Base Sepolia, waiting for a block…"
+        : s.status === "confirmed"
+          ? `Settled on Base Sepolia in block ${s.blockNumber}`
+          : s.error ?? "Settlement failed";
+  return (
+    <div className={cn("mt-2 flex flex-wrap items-center gap-2 font-mono text-xs", s.status === "failed" ? "text-tangerine-300" : "text-fg/80")}>
+      {(s.status === "awaiting_wallet" || s.status === "pending") && <LoaderCircle className="h-3.5 w-3.5 animate-spin text-electric-300" />}
+      {s.status === "confirmed" && <Check className="h-3.5 w-3.5 text-success" />}
+      <span>{label}</span>
+      {s.hash && (
+        <a href={explorerTx(s.hash)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-electric-300 hover:text-electric-400">
+          {shortHex(s.hash, 8, 6)} <ArrowUpRight className="h-3 w-3" />
+        </a>
+      )}
+    </div>
   );
 }

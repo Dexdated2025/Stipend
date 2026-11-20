@@ -12,6 +12,7 @@ const Mandates = lazy(() => import("@/pages/app/Mandates"));
 const Payments = lazy(() => import("@/pages/app/Payments"));
 const Treasury = lazy(() => import("@/pages/app/Treasury"));
 const Settings = lazy(() => import("@/pages/app/Settings"));
+const Testnet = lazy(() => import("@/pages/app/Testnet"));
 
 function ScrollToTop() {
   const { pathname, hash } = useLocation();
@@ -44,6 +45,7 @@ export default function App() {
             <Route path="payments" element={<Payments />} />
             <Route path="treasury" element={<Treasury />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="testnet" element={<Testnet />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

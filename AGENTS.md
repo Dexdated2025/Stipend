@@ -6,7 +6,7 @@ Instructions for AI coding agents (ChatGPT Codex, Claude Code, Cursor and simila
 
 Stipend marketing site plus a simulated product demo. Static single-page app, no backend except a Supabase table for signups.
 
-- Stack: Vite 8, React 19, TypeScript 5.9 (strict), Tailwind CSS 3.4, React Router 7, Motion (motion/react), Recharts 3, lucide-react.
+- Stack: Vite 8, React 19, TypeScript 5.9 (strict), Tailwind CSS 3.4, React Router 7, Motion (motion/react), Recharts 3, lucide-react, wagmi 3 + viem 2 (Base Sepolia only).
 - Design principle: for every piece of text ask "Do we need words, or can a visual do the job?" Keep landing body copy under 220 words. No explanatory paragraphs in the dashboard.
 - Routes: `/` landing, `/app/*` demo dashboard (lazy-loaded), `*` 404.
 - Demo state lives in `src/lib/demo/store.tsx` (React context + localStorage key `stipend-demo-v1`).
@@ -31,7 +31,8 @@ npm test           # vitest. Must pass before you finish.
 5. **Demo data:** if you change the shape of `DemoState`, bump `DEMO_VERSION` in `src/lib/demo/seed.ts` so stored browser state resets.
 6. **New mandate rules:** add the rule id to `RuleId` in `types.ts`, add the check in `evaluatePayment()` in the right order, and add a test.
 7. **Honesty labels:** keep the "Demo mode. Simulated data" banner in `/app`, the footer disclaimer, and the "Illustrative only. Rates vary and are not guaranteed." note on any yield figure.
-8. **Secrets:** only `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (public anon/publishable key) and `VITE_CONTACT_EMAIL` go in env. Never add a service-role key to the frontend.
+8. **Secrets:** only `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (public anon/publishable key), `VITE_CONTACT_EMAIL` and `VITE_BASE_SEPOLIA_RPC_URL` go in env. Never add a service-role key or any private key to the frontend.
+8b. **Web3:** testnet only. Base Sepolia (84532) and Circle test USDC `0x036CbD53842c5426634e7929541eC2318f3dCF7e`. Never add mainnet chains or mainnet token addresses without an explicit decision. Use wagmi v3 `mutate`/`mutateAsync`, not the deprecated names.
 9. **Accessibility:** keep labels on inputs, `aria-label` on icon-only buttons, and visible focus rings.
 10. Keep pages responsive down to 360px wide.
 
@@ -40,7 +41,11 @@ npm test           # vitest. Must pass before you finish.
 | Change | File |
 |---|---|
 | Landing copy and sections | `src/components/landing/*` |
-| Hero animation | `src/components/landing/HeroFlow.tsx` |
+| Hero animation | `src/components/landing/HeroGate.tsx` |
+| Wallet, network, balances | `src/lib/web3/*`, `src/components/web3/*` |
+| Mandate signing (EIP-712) | `src/lib/web3/mandateSignature.ts`, `src/components/web3/SignMandateButton.tsx` |
+| On-chain settlement | `src/lib/web3/settle.ts`, wired in `src/components/app/Simulator.tsx` |
+| Testnet page | `src/pages/app/Testnet.tsx` |
 | Signup fields / validation / Supabase call | `src/lib/signups.ts`, `src/components/landing/DesignPartnerForm.tsx`, `supabase/migrations/*` |
 | Sidebar, banner, layout | `src/components/app/AppShell.tsx` |
 | Payment simulator | `src/components/app/Simulator.tsx` |

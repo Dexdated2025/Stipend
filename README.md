@@ -5,6 +5,7 @@ The mandate layer for AI agents. This repo contains:
 - **Landing page** (`/`): hero with animated payment flow, problem, product modules (Guardrails, Passport, Sweep), how it works, built-on badges, SDK preview, design partner signup form.
 - **Demo dashboard** (`/app`): Overview, Agents, Agent Passport pages, Mandates editor, Payments ledger with a live payment simulator, Treasury (Sweep), Settings. All demo data is simulated in the browser and saved to localStorage. "Reset" restores it.
 - **Signup backend**: design partner signups are saved to a Supabase Postgres table with insert-only security.
+- **Testnet wallet** (`/app/testnet`): connect MetaMask (or any EIP-6963 wallet), auto-switch to Base Sepolia, see test ETH and test USDC balances, sign each agent's mandate with EIP-712 (verified in the browser and shown on its Passport), and settle approved simulator payments as real test-USDC transfers on Base Sepolia.
 
 Stack: Vite, React 19, TypeScript, Tailwind CSS 3, React Router 7, Motion (motion/react), Recharts, lucide-react. No server code. It deploys as a static site anywhere.
 
@@ -124,7 +125,16 @@ Fonts: Space Grotesk (headings), Inter (body), JetBrains Mono (numbers, addresse
 - **ChatGPT chat**: upload the zip (or individual files) and ask for changes. Paste back the changed files.
 - After any change, run `npm run build` and `npm test` before deploying.
 
-## 7. What is real and what is simulated
+## 7. Testnet (Base Sepolia)
 
-Real: the website, routing, form validation, the Supabase signup pipeline, the mandate rule engine logic.
-Simulated: wallets, balances, payments, yield and API keys in `/app`. Nothing touches a blockchain or moves money. The site says so in the dashboard banner and the footer. Yield figures use an illustrative 4% APY and are labelled as not guaranteed.
+1. Install MetaMask and open `/app/testnet`. Click **Connect wallet**. The app asks MetaMask to add and switch to Base Sepolia (chain 84532).
+2. Get test ETH for gas from the Coinbase CDP faucet and test USDC from faucet.circle.com (pick Base Sepolia). The Testnet page links both.
+3. In **Mandates**, click **Sign with wallet**. MetaMask shows the mandate as typed data (EIP-712). The signature is verified in the browser and appears on the agent's Passport. Editing the mandate marks the signature outdated.
+4. In the simulator, pick the **Testnet · $1** preset and run it. When the mandate approves, MetaMask asks you to send that amount of test USDC to the vendor's demo address. The result links to BaseScan.
+
+Vendor demo addresses are derived deterministically from the vendor id (`vendorAddress()` in `src/lib/web3/config.ts`). They belong to no one; test USDC sent there is parked. No private keys exist anywhere in this codebase.
+
+## 8. What is real and what is simulated
+
+Real: the website, routing, form validation, the Supabase signup pipeline, the mandate rule engine logic, wallet connection, EIP-712 mandate signatures, and test-USDC settlements on Base Sepolia.
+Simulated: agent wallets, the seeded payments and balances, the treasury and yield, and API keys in `/app`. Nothing touches mainnet or moves real money. The site says so in the dashboard banner and the footer. Yield figures use an illustrative 4% APY and are labelled as not guaranteed.
